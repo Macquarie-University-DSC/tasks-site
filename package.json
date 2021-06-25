@@ -1,0 +1,22 @@
+{
+  "name": "tasks-site",
+  "version": "1.0.0",
+  "description": "A Tasks Web Site",
+  "repository": "repo",
+  "author": "Euan Mendoza",
+  "license": "GPL-3.0",
+  "private": false,
+  "scripts": {
+    "start": "parcel serve ./src/index.html",
+    "dist": "parcel serve ./src/index.html"
+  },
+  "devDependencies": {
+    "@parcel/transformer-elm": "2.0.0-beta.3.1",
+    "elm": "^0.19.1-5",
+    "parcel": "^2.0.0-beta.3.1"
+  },
+  "dependencies": {
+    "milligram": "^1.4.1",
+    "normalize.css": "^8.0.1"
+  }
+}

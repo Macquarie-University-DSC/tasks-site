@@ -1,0 +1,10 @@
+# Node Dependencies
+/node_modules/
+
+# Parcel
+/.parcel-cache/
+/dist/
+
+# Elm
+/elm-stuff/
+
