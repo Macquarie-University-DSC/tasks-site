@@ -10,4 +10,4 @@ run `yarn start`
 
 ## Creating a production build
 
-run 'yarn dist' and build will be in `./dist`
+run `yarn dist` and build will be in `./dist`
