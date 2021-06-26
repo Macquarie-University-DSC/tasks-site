@@ -83,7 +83,7 @@ subscriptions _ =
 
 view : Model -> Html Msg
 view model =
-  div [ class "flex-main" ]
+  div [ class "main" ]
     (viewTasks model)
 
 viewTasks : Model -> List (Html Msg)
@@ -103,6 +103,7 @@ viewTask _ task =
 -- MAIN --
 
 
+main : Program () Model Msg
 main =
   Browser.element 
     { init = init
