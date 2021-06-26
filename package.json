@@ -7,8 +7,8 @@
   "license": "GPL-3.0",
   "private": false,
   "scripts": {
-    "start": "parcel serve ./src/index.html",
-    "dist": "parcel serve ./src/index.html"
+    "start": "parcel serve ./public/index.html",
+    "dist": "parcel serve ./public/index.html"
   },
   "devDependencies": {
     "@parcel/transformer-elm": "2.0.0-beta.3.1",
