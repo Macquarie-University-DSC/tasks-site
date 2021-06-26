@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, h1, h4, text, input)
+import Html exposing (Html, button, div, h1, h4, text, input, i)
 import Html.Attributes exposing (class, type_, checked)
 import Html.Events exposing (onClick)
 import Task
@@ -95,7 +95,7 @@ viewTask _ task =
   div [ class "flex-row" ]
     [ input [ type_ "checkbox", checked task.is_complete, onClick (ToggleComplete task.id (not task.is_complete)) ] []
     , h4 [] [ text task.name ]
-    , button [] [ text "v" ]
+    , button [ class "button button-clear down-button"] [ i [ class "fas fa-level-down-alt"] [] ]
     ]
 
 
