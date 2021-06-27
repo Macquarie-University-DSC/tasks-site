@@ -13,10 +13,10 @@ import List exposing ((::))
 
 testTasks : List TaskType
 testTasks =
-  [ TaskType 1 "Test Task 1" "Test Task 1 Description" Nothing False
-  , TaskType 2 "Test Task 2" "Test Task 2 Description" Nothing True
-  , TaskType 3 "Test Task 3" "Test Task 3 Description" (Just (Time.millisToPosix 1625097600000)) False
-  , TaskType 4 "Test Task 4" "Test Task 4 Description" (Just (Time.millisToPosix 1625097600000)) True
+  [ TaskType 1 "Test Task 1" "Test Task 1 Description" Nothing False False
+  , TaskType 2 "Test Task 2" "Test Task 2 Description" Nothing True False
+  , TaskType 3 "Test Task 3" "Test Task 3 Description" (Just (Time.millisToPosix 1625097600000)) False False
+  , TaskType 4 "Test Task 4" "Test Task 4 Description" (Just (Time.millisToPosix 1625097600000)) True False
   ]
 
 type alias Model =
@@ -25,11 +25,12 @@ type alias Model =
   }
 
 type alias TaskType =
-  { id          : Int
-  , name        : String
-  , description : String
-  , due_date    : Maybe Time.Posix
-  , is_complete : Bool
+  { id            : Int
+  , name          : String
+  , description   : String
+  , due_date      : Maybe Time.Posix
+  , is_complete   : Bool
+  , display_extra : Bool
   }
 
 init : () -> (Model, Cmd Msg)
@@ -84,19 +85,27 @@ subscriptions _ =
 view : Model -> Html Msg
 view model =
   div [ class "main" ]
-    (viewTasks model)
+    (viewTitle :: (viewTasks model))
+
+viewTitle : Html Msg
+viewTitle =
+  h1 [] [ text "TRACK YOUR TASKS!" ]
 
 viewTasks : Model -> List (Html Msg)
 viewTasks model =
-  (h1 [] [ text "TRACK YOUR TASKS!" ]) :: (List.map (viewTask model) model.tasks)
+  (List.map (viewTask model) model.tasks)
 
 viewTask : Model -> TaskType -> Html Msg
 viewTask _ task =
-  div [ class "flex-row" ]
-    [ input [ type_ "checkbox", checked task.is_complete, onClick (ToggleComplete task.id (not task.is_complete)) ] []
-    , h4 [] [ text task.name ]
-    , button [ class "button button-clear down-button"] [ i [ class "fas fa-level-down-alt"] [] ]
+  div [ class "task-content" ]
+    [ div [ class "flex-row" ]
+        [ input [ type_ "checkbox", checked task.is_complete, onClick (ToggleComplete task.id (not task.is_complete)) ] []
+        , h4 [] [ text task.name ]
+        , button [ class "button button-clear down-button"] [ i [ class "fas fa-level-down-alt"] [] ]
+        ]
+      , div [] []
     ]
+  
 
 
 
