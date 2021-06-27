@@ -4,6 +4,8 @@ import Browser
 import Html exposing (Html, button, div, h1, h4, text, input, i)
 import Html.Attributes exposing (class, type_, checked)
 import Html.Events exposing (onClick)
+import Html.Keyed as Keyed
+import Html.Lazy exposing (lazy, lazy2)
 import Task
 import Time
 import List exposing ((::))
@@ -85,17 +87,22 @@ subscriptions _ =
 view : Model -> Html Msg
 view model =
   div [ class "main" ]
-    (viewTitle :: (viewTasks model))
+    [ viewTitle
+    , lazy viewTasks model
+    ]
 
 viewTitle : Html Msg
 viewTitle =
   h1 [] [ text "TRACK YOUR TASKS!" ]
 
-viewTasks : Model -> List (Html Msg)
+viewTasks : Model -> Html Msg
 viewTasks model =
-  (List.map (viewTask model) model.tasks)
+  Keyed.node "ul" [] (List.map (viewKeyedTask model.zone) model.tasks)
 
-viewTask : Model -> TaskType -> Html Msg
+viewKeyedTask : Time.Zone -> TaskType -> (String, Html Msg)
+viewKeyedTask zone task =
+  ( (String.fromInt task.id), lazy2 viewTask zone task)
+viewTask : Time.Zone -> TaskType -> Html Msg
 viewTask _ task =
   div [ class "task-content" ]
     [ div [ class "flex-row" ]
@@ -120,5 +127,4 @@ main =
     , view = view
     , subscriptions = subscriptions
     }
-
 
