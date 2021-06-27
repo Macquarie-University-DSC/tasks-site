@@ -6,27 +6,26 @@ import Html.Attributes exposing (class, type_, checked)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy exposing (lazy, lazy2)
+import Http
 import Task
 import Time
-import List exposing ((::))
 
 -- MODEL --
 
-
-testTasks : List TaskType
-testTasks =
-  [ TaskType 1 "Test Task 1" "Test Task 1 Description" Nothing False False
-  , TaskType 2 "Test Task 2" "Test Task 2 Description" Nothing True False
-  , TaskType 3 "Test Task 3" "Test Task 3 Description" (Just (Time.millisToPosix 1625097600000)) False False
-  , TaskType 4 "Test Task 4" "Test Task 4 Description" (Just (Time.millisToPosix 1625097600000)) True False
-  ]
+apiURL : String
+apiURL = "localhost/api"
 
 type alias Model =
-  { tasks : List TaskType
+  { tasks : Status 
   , zone  : Time.Zone
   }
 
-type alias TaskType =
+type Status
+  = Failure
+  | Loading
+  | Success (List TaskModel)
+
+type alias TaskModel =
   { id            : Int
   , name          : String
   , description   : String
@@ -37,18 +36,28 @@ type alias TaskType =
 
 init : () -> (Model, Cmd Msg)
 init _ =
-  ( Model testTasks Time.utc
-  , Task.perform AdjustTimeZone Time.here
+  ( Model Loading Time.utc
+  , Cmd.batch [ setTimezone ]
   )
+
+setTimezone : Cmd Msg
+setTimezone = Task.perform AdjustTimeZone Time.here
 
 
 
 -- UPDATE --
 
 
+type Msg 
+  = AdjustTimeZone Time.Zone
+  | HttpMsgs HttpMsg
+  | TaskMsgs TaskMsg
 
-type Msg = AdjustTimeZone Time.Zone
-         | ToggleComplete Int Bool
+type HttpMsg
+  = Received (Result Http.Error (List TaskModel))
+  | Waiting
+
+type TaskMsg = ToggleComplete Int Bool
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -58,15 +67,48 @@ update msg model =
       , Cmd.none
       )
 
+    HttpMsgs http_msgs ->
+      updateHttp http_msgs model
+        
+    TaskMsgs task_msg ->
+      case model.tasks of
+        Success tasks ->
+          let
+            (updated_tasks, cmd_msg) = updateTask task_msg tasks 
+          in
+            ( { model | tasks = Success updated_tasks }
+            , cmd_msg
+            )
+        
+        _ ->
+          (model, Cmd.none)
+
+updateHttp : HttpMsg -> Model -> (Model, Cmd Msg)
+updateHttp msg model =
+  case msg of
+    Waiting ->
+      ({model | tasks = Loading}, Cmd.none)
+
+    Received result ->
+      case result of
+        Ok tasks ->
+          ({model | tasks = Success tasks}, Cmd.none)
+        
+        Err _ ->
+          ({model | tasks = Failure}, Cmd.none)
+
+updateTask : TaskMsg -> List TaskModel -> (List TaskModel, Cmd Msg)
+updateTask msg tasks =
+  case msg of
     ToggleComplete id is_complete ->
       let
-        updateTask task =
+        updateTaskModel task =
           if task.id == id then
             { task | is_complete = is_complete }
           else
             task
         in 
-          ( { model | tasks = List.map updateTask model.tasks }
+          ( List.map updateTaskModel tasks
           , Cmd.none
           )
 
@@ -99,10 +141,10 @@ viewTasks : Model -> Html Msg
 viewTasks model =
   Keyed.node "ul" [] (List.map (viewKeyedTask model.zone) model.tasks)
 
-viewKeyedTask : Time.Zone -> TaskType -> (String, Html Msg)
+viewKeyedTask : Time.Zone -> TaskModel -> (String, Html Msg)
 viewKeyedTask zone task =
   ( (String.fromInt task.id), lazy2 viewTask zone task)
-viewTask : Time.Zone -> TaskType -> Html Msg
+viewTask : Time.Zone -> TaskModel -> Html Msg
 viewTask _ task =
   div [ class "task-content" ]
     [ div [ class "flex-row" ]
@@ -113,6 +155,17 @@ viewTask _ task =
       , div [] []
     ]
   
+
+
+-- HTTP --
+
+
+getAllTasks : Cmd Msg
+getAllTasks =
+  Http.get
+    { url = apiURL ++ "/tasks"
+    , expect = Http.expectJson Received taskDecoder
+    }
 
 
 
