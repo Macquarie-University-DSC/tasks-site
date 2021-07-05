@@ -45,8 +45,12 @@ type alias TaskType =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
+    let
+        getTasksMsg =
+            Cmd.map HttpMsgs getAllTasks
+    in
     ( Model Loading Time.utc
-    , Cmd.batch [ setTimezone ]
+    , Cmd.batch [ setTimezone, getTasksMsg ]
     )
 
 
@@ -74,6 +78,11 @@ type TaskMsg
     = ToggleComplete Int Bool
 
 
+mapUpdate : (msg -> Msg) -> ( Model, Cmd msg ) -> ( Model, Cmd Msg )
+mapUpdate toMsg ( model, cmd_msg ) =
+    ( model, Cmd.map toMsg cmd_msg )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -83,11 +92,7 @@ update msg model =
             )
 
         HttpMsgs http_msgs ->
-            let
-                ( new_model, msgs ) =
-                    updateHttp http_msgs model
-            in
-            ( new_model, Cmd.map (\sub_msg -> HttpMsgs sub_msg) msgs )
+            mapUpdate HttpMsgs (updateHttp http_msgs model)
 
         TaskMsgs task_msgs ->
             updateTask task_msgs model
