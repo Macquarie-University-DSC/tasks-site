@@ -1,116 +1,135 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, h1, h4, text, input, i)
-import Html.Attributes exposing (class, type_, checked)
+import Html exposing (Html, button, div, h1, h3, h4, i, input, text)
+import Html.Attributes exposing (checked, class, type_)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy exposing (lazy, lazy2)
 import Http
+import Json.Decode as Decode
 import Task
 import Time
 
+
+
 -- MODEL --
 
-apiURL : String
-apiURL = "localhost/api"
 
 type alias Model =
-  { tasks : Status 
-  , zone  : Time.Zone
-  }
+    { tasks_status : Status
+    , zone : Time.Zone
+    }
+
 
 type Status
-  = Failure
-  | Loading
-  | Success (List TaskModel)
+    = Failure
+    | Loading
+    | Success (List TaskModel)
+
 
 type alias TaskModel =
-  { id            : Int
-  , name          : String
-  , description   : String
-  , due_date      : Maybe Time.Posix
-  , is_complete   : Bool
-  , display_extra : Bool
-  }
+    { task : TaskType
+    , display_extra : Bool
+    }
 
-init : () -> (Model, Cmd Msg)
+
+type alias TaskType =
+    { id : Int
+    , name : String
+    , description : String
+    , due_date : Maybe Time.Posix
+    , is_complete : Bool
+    }
+
+
+init : () -> ( Model, Cmd Msg )
 init _ =
-  ( Model Loading Time.utc
-  , Cmd.batch [ setTimezone ]
-  )
+    ( Model Loading Time.utc
+    , Cmd.batch [ setTimezone ]
+    )
+
 
 setTimezone : Cmd Msg
-setTimezone = Task.perform AdjustTimeZone Time.here
+setTimezone =
+    Task.perform AdjustTimeZone Time.here
 
 
 
 -- UPDATE --
 
 
-type Msg 
-  = AdjustTimeZone Time.Zone
-  | HttpMsgs HttpMsg
-  | TaskMsgs TaskMsg
+type Msg
+    = AdjustTimeZone Time.Zone
+    | HttpMsgs HttpMsg
+    | TaskMsgs TaskMsg
+
 
 type HttpMsg
-  = Received (Result Http.Error (List TaskModel))
-  | Waiting
+    = Received (Result Http.Error (List TaskModel))
+    | Waiting
 
-type TaskMsg = ToggleComplete Int Bool
 
-update : Msg -> Model -> (Model, Cmd Msg)
+type TaskMsg
+    = ToggleComplete Int Bool
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-  case msg of
-    AdjustTimeZone newZone ->
-      ( { model | zone = newZone }
-      , Cmd.none
-      )
-
-    HttpMsgs http_msgs ->
-      updateHttp http_msgs model
-        
-    TaskMsgs task_msg ->
-      case model.tasks of
-        Success tasks ->
-          let
-            (updated_tasks, cmd_msg) = updateTask task_msg tasks 
-          in
-            ( { model | tasks = Success updated_tasks }
-            , cmd_msg
+    case msg of
+        AdjustTimeZone newZone ->
+            ( { model | zone = newZone }
+            , Cmd.none
             )
-        
-        _ ->
-          (model, Cmd.none)
 
-updateHttp : HttpMsg -> Model -> (Model, Cmd Msg)
+        HttpMsgs http_msgs ->
+            updateHttp http_msgs model
+
+        TaskMsgs task_msg ->
+            case model.tasks_status of
+                Success tasks ->
+                    let
+                        ( updated_tasks, cmd_msg ) =
+                            updateTask task_msg tasks
+                    in
+                    ( { model | tasks_status = Success updated_tasks }
+                    , cmd_msg
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+
+updateHttp : HttpMsg -> Model -> ( Model, Cmd Msg )
 updateHttp msg model =
-  case msg of
-    Waiting ->
-      ({model | tasks = Loading}, Cmd.none)
+    case msg of
+        Waiting ->
+            ( { model | tasks_status = Loading }, Cmd.none )
 
-    Received result ->
-      case result of
-        Ok tasks ->
-          ({model | tasks = Success tasks}, Cmd.none)
-        
-        Err _ ->
-          ({model | tasks = Failure}, Cmd.none)
+        Received result ->
+            case result of
+                Ok tasks ->
+                    ( { model | tasks_status = Success tasks }, Cmd.none )
 
-updateTask : TaskMsg -> List TaskModel -> (List TaskModel, Cmd Msg)
-updateTask msg tasks =
-  case msg of
-    ToggleComplete id is_complete ->
-      let
-        updateTaskModel task =
-          if task.id == id then
-            { task | is_complete = is_complete }
-          else
-            task
-        in 
-          ( List.map updateTaskModel tasks
-          , Cmd.none
-          )
+                Err _ ->
+                    ( { model | tasks_status = Failure }, Cmd.none )
+
+
+updateTaskOld : TaskMsg -> List TaskModel -> ( List TaskModel, Cmd Msg )
+updateTaskOld msg tasks =
+    case msg of
+        ToggleComplete id is_complete ->
+            let
+                updateTaskModel task =
+                    if task.id == id then
+                        { task | is_complete = is_complete }
+
+                    else
+                        task
+            in
+            ( List.map updateTaskModel tasks
+            , Cmd.none
+            )
 
 
 
@@ -119,7 +138,7 @@ updateTask msg tasks =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-  Sub.none
+    Sub.none
 
 
 
@@ -128,44 +147,81 @@ subscriptions _ =
 
 view : Model -> Html Msg
 view model =
-  div [ class "main" ]
-    [ viewTitle
-    , lazy viewTasks model
-    ]
+    div [ class "main" ]
+        [ viewTitle
+        , lazy viewTasks model
+        ]
+
 
 viewTitle : Html Msg
 viewTitle =
-  h1 [] [ text "TRACK YOUR TASKS!" ]
+    h1 [] [ text "TRACK YOUR TASKS!" ]
+
 
 viewTasks : Model -> Html Msg
 viewTasks model =
-  Keyed.node "ul" [] (List.map (viewKeyedTask model.zone) model.tasks)
+    case model.tasks_status of
+        Failure ->
+            h3 [] [ text "Error, could not connect to api" ]
 
-viewKeyedTask : Time.Zone -> TaskModel -> (String, Html Msg)
+        Loading ->
+            h3 [] [ text "Loading..." ]
+
+        Success tasks ->
+            Keyed.node "ul" [] (List.map (viewKeyedTask model.zone) tasks)
+
+
+viewKeyedTask : Time.Zone -> TaskModel -> ( String, Html Msg )
 viewKeyedTask zone task =
-  ( (String.fromInt task.id), lazy2 viewTask zone task)
+    ( String.fromInt task.id, lazy2 viewTask zone task )
+
+
 viewTask : Time.Zone -> TaskModel -> Html Msg
 viewTask _ task =
-  div [ class "task-content" ]
-    [ div [ class "flex-row" ]
-        [ input [ type_ "checkbox", checked task.is_complete, onClick (ToggleComplete task.id (not task.is_complete)) ] []
-        , h4 [] [ text task.name ]
-        , button [ class "button button-clear down-button"] [ i [ class "fas fa-level-down-alt"] [] ]
+    div [ class "task-content" ]
+        [ div [ class "flex-row" ]
+            [ input [ type_ "checkbox", checked task.is_complete, onClick (TaskMsgs (ToggleComplete task.id (not task.is_complete))) ] []
+            , h4 [] [ text task.name ]
+            , button [ class "button button-clear down-button" ] [ i [ class "fas fa-level-down-alt" ] [] ]
+            ]
+        , div [] []
         ]
-      , div [] []
-    ]
-  
+
 
 
 -- HTTP --
 
 
-getAllTasks : Cmd Msg
+apiURL : String
+apiURL =
+    "https://api.howgood.me"
+
+
+getAllTasks : Cmd HttpMsg
 getAllTasks =
-  Http.get
-    { url = apiURL ++ "/tasks"
-    , expect = Http.expectJson Received taskDecoder
-    }
+    Http.get
+        { url = apiURL ++ "/tasks"
+        , expect = Http.expectJson Received (Decode.list taskDecoder)
+        }
+
+
+
+-- JSON --
+
+
+taskDecoder : Decode.Decoder TaskType
+taskDecoder =
+    Decode.map5 TaskType
+        (Decode.field "id" Decode.int)
+        (Decode.field "name" Decode.string)
+        (Decode.field "description" Decode.string)
+        (Decode.field "due_date" (Decode.maybe timeDecoder))
+        (Decode.field "is_complete" Decode.bool)
+
+
+timeDecoder : Decode.Decoder Time.Posix
+timeDecoder =
+    Decode.map Time.millisToPosix Decode.int
 
 
 
@@ -174,10 +230,9 @@ getAllTasks =
 
 main : Program () Model Msg
 main =
-  Browser.element 
-    { init = init
-    , update = update
-    , view = view
-    , subscriptions = subscriptions
-    }
-
+    Browser.element
+        { init = init
+        , update = update
+        , view = view
+        , subscriptions = subscriptions
+        }
