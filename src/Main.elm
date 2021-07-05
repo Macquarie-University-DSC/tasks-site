@@ -5,7 +5,7 @@ import Html exposing (Html, button, div, h1, h3, h4, i, input, text)
 import Html.Attributes exposing (checked, class, type_)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
-import Html.Lazy exposing (lazy, lazy2)
+import Html.Lazy exposing (lazy, lazy3)
 import Http
 import Json.Decode as Decode
 import Task
@@ -83,22 +83,30 @@ update msg model =
             )
 
         HttpMsgs http_msgs ->
-            updateHttp http_msgs model
+            let
+                ( new_model, msgs ) =
+                    updateHttp http_msgs model
+            in
+            ( new_model, Cmd.map (\sub_msg -> HttpMsgs sub_msg) msgs )
 
         TaskMsgs task_msgs ->
             updateTask task_msgs model
 
 
-updateHttp : HttpMsg -> Model -> ( Model, Cmd Msg )
+updateHttp : HttpMsg -> Model -> ( Model, Cmd HttpMsg )
 updateHttp msg model =
     case msg of
         Waiting ->
-            ( { model | status = Loading }, Cmd.none )
+            ( { model | status = Loading }, getAllTasks )
 
         Received result ->
             case result of
                 Ok tasks ->
-                    ( { model | status = Success tasks }, Cmd.none )
+                    let
+                        tasks_model =
+                            List.map (\task -> TaskModel task False) tasks
+                    in
+                    ( { model | status = Success tasks_model }, Cmd.none )
 
                 Err _ ->
                     ( { model | status = Failure }, Cmd.none )
@@ -106,7 +114,7 @@ updateHttp msg model =
 
 updateTask : TaskMsg -> Model -> ( Model, Cmd Msg )
 updateTask msg model =
-    case model.task_status of
+    case model.status of
         Success tasks ->
             let
                 ( updated_tasks, cmd_msg ) =
@@ -169,7 +177,7 @@ viewTitle =
 
 viewTasks : Model -> Html Msg
 viewTasks model =
-    case model.tasks_status of
+    case model.status of
         Failure ->
             h3 [] [ text "Error, could not connect to api" ]
 
@@ -181,12 +189,12 @@ viewTasks model =
 
 
 viewKeyedTask : Time.Zone -> TaskModel -> ( String, Html Msg )
-viewKeyedTask zone task =
-    ( String.fromInt task.id, lazy2 viewTask zone task )
+viewKeyedTask zone model =
+    ( String.fromInt model.task.id, lazy3 viewTask zone model.task model.display_extra )
 
 
-viewTask : Time.Zone -> TaskModel -> Html Msg
-viewTask _ task =
+viewTask : Time.Zone -> TaskType -> Bool -> Html Msg
+viewTask _ task _ =
     div [ class "task-content" ]
         [ div [ class "flex-row" ]
             [ input [ type_ "checkbox", checked task.is_complete, onClick (TaskMsgs (ToggleComplete task.id (not task.is_complete))) ] []
