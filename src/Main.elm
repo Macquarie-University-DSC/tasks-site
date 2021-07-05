@@ -1,8 +1,8 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, h1, h3, h4, i, input, text)
-import Html.Attributes exposing (checked, class, type_)
+import Html exposing (Html, button, div, h1, h3, h4, i, input, p, text)
+import Html.Attributes exposing (checked, class, hidden, type_)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy exposing (lazy, lazy3)
@@ -29,8 +29,8 @@ type Status
 
 
 type alias TaskModel =
-    { task : TaskType
-    , display_extra : Bool
+    { display_extra : Bool
+    , task : TaskType
     }
 
 
@@ -75,7 +75,8 @@ type HttpMsg
 
 
 type TaskMsg
-    = ToggleComplete Int Bool
+    = ToggleDisplayExtra Int Bool
+    | ToggleComplete Int Bool
 
 
 mapUpdate : (msg -> Msg) -> ( Model, Cmd msg ) -> ( Model, Cmd Msg )
@@ -95,7 +96,7 @@ update msg model =
             mapUpdate HttpMsgs (updateHttp http_msgs model)
 
         TaskMsgs task_msgs ->
-            updateTask task_msgs model
+            mapUpdate TaskMsgs (updateTask task_msgs model)
 
 
 updateHttp : HttpMsg -> Model -> ( Model, Cmd HttpMsg )
@@ -109,7 +110,7 @@ updateHttp msg model =
                 Ok tasks ->
                     let
                         tasks_model =
-                            List.map (\task -> TaskModel task False) tasks
+                            List.map (TaskModel True) tasks
                     in
                     ( { model | status = Success tasks_model }, Cmd.none )
 
@@ -117,7 +118,7 @@ updateHttp msg model =
                     ( { model | status = Failure }, Cmd.none )
 
 
-updateTask : TaskMsg -> Model -> ( Model, Cmd Msg )
+updateTask : TaskMsg -> Model -> ( Model, Cmd TaskMsg )
 updateTask msg model =
     case model.status of
         Success tasks ->
@@ -133,13 +134,26 @@ updateTask msg model =
             ( model, Cmd.none )
 
 
-updateTaskModels : TaskMsg -> List TaskModel -> ( List TaskModel, Cmd Msg )
+updateTaskModels : TaskMsg -> List TaskModel -> ( List TaskModel, Cmd TaskMsg )
 updateTaskModels msg model =
     let
         applyToModel func task_model =
             { task_model | task = func task_model.task }
     in
     case msg of
+        ToggleDisplayExtra id display_extra ->
+            let
+                toggleDisplayExtra task_model =
+                    if task_model.task.id == id then
+                        { task_model | display_extra = display_extra }
+
+                    else
+                        task_model
+            in
+            ( List.map toggleDisplayExtra model
+            , Cmd.none
+            )
+
         ToggleComplete id is_complete ->
             let
                 toggleComplete task =
@@ -199,14 +213,17 @@ viewKeyedTask zone model =
 
 
 viewTask : Time.Zone -> TaskType -> Bool -> Html Msg
-viewTask _ task _ =
+viewTask _ task display_extra =
     div [ class "task-content" ]
         [ div [ class "flex-row" ]
             [ input [ type_ "checkbox", checked task.is_complete, onClick (TaskMsgs (ToggleComplete task.id (not task.is_complete))) ] []
             , h4 [] [ text task.name ]
-            , button [ class "button button-clear down-button" ] [ i [ class "fas fa-level-down-alt" ] [] ]
+            , button [ class "button button-clear down-button", onClick (TaskMsgs (ToggleDisplayExtra task.id (not display_extra))) ]
+                [ i [ class "fas fa-level-down-alt" ] [] ]
             ]
-        , div [] []
+        , div [ hidden display_extra ]
+            [ p [] [ text task.description ]
+            ]
         ]
 
 
