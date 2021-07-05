@@ -17,7 +17,7 @@ import Time
 
 
 type alias Model =
-    { tasks_status : Status
+    { status : Status
     , zone : Time.Zone
     }
 
@@ -66,7 +66,7 @@ type Msg
 
 
 type HttpMsg
-    = Received (Result Http.Error (List TaskModel))
+    = Received (Result Http.Error (List TaskType))
     | Waiting
 
 
@@ -85,49 +85,58 @@ update msg model =
         HttpMsgs http_msgs ->
             updateHttp http_msgs model
 
-        TaskMsgs task_msg ->
-            case model.tasks_status of
-                Success tasks ->
-                    let
-                        ( updated_tasks, cmd_msg ) =
-                            updateTask task_msg tasks
-                    in
-                    ( { model | tasks_status = Success updated_tasks }
-                    , cmd_msg
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+        TaskMsgs task_msgs ->
+            updateTask task_msgs model
 
 
 updateHttp : HttpMsg -> Model -> ( Model, Cmd Msg )
 updateHttp msg model =
     case msg of
         Waiting ->
-            ( { model | tasks_status = Loading }, Cmd.none )
+            ( { model | status = Loading }, Cmd.none )
 
         Received result ->
             case result of
                 Ok tasks ->
-                    ( { model | tasks_status = Success tasks }, Cmd.none )
+                    ( { model | status = Success tasks }, Cmd.none )
 
                 Err _ ->
-                    ( { model | tasks_status = Failure }, Cmd.none )
+                    ( { model | status = Failure }, Cmd.none )
 
 
-updateTaskOld : TaskMsg -> List TaskModel -> ( List TaskModel, Cmd Msg )
-updateTaskOld msg tasks =
+updateTask : TaskMsg -> Model -> ( Model, Cmd Msg )
+updateTask msg model =
+    case model.task_status of
+        Success tasks ->
+            let
+                ( updated_tasks, cmd_msg ) =
+                    updateTaskModels msg tasks
+            in
+            ( { model | status = Success updated_tasks }
+            , cmd_msg
+            )
+
+        _ ->
+            ( model, Cmd.none )
+
+
+updateTaskModels : TaskMsg -> List TaskModel -> ( List TaskModel, Cmd Msg )
+updateTaskModels msg model =
+    let
+        applyToModel func task_model =
+            { task_model | task = func task_model.task }
+    in
     case msg of
         ToggleComplete id is_complete ->
             let
-                updateTaskModel task =
+                toggleComplete task =
                     if task.id == id then
                         { task | is_complete = is_complete }
 
                     else
                         task
             in
-            ( List.map updateTaskModel tasks
+            ( List.map (applyToModel toggleComplete) model
             , Cmd.none
             )
 
