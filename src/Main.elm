@@ -5,7 +5,7 @@ import Html exposing (Html, button, div, h1, h3, h4, i, input, text)
 import Html.Attributes exposing (checked, class, type_)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
-import Html.Lazy exposing (lazy, lazy2)
+import Html.Lazy exposing (lazy, lazy3)
 import Http
 import Json.Decode as Decode
 import Task
@@ -17,7 +17,7 @@ import Time
 
 
 type alias Model =
-    { tasks_status : Status
+    { status : Status
     , zone : Time.Zone
     }
 
@@ -45,8 +45,12 @@ type alias TaskType =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
+    let
+        getTasksMsg =
+            Cmd.map HttpMsgs getAllTasks
+    in
     ( Model Loading Time.utc
-    , Cmd.batch [ setTimezone ]
+    , Cmd.batch [ setTimezone, getTasksMsg ]
     )
 
 
@@ -66,12 +70,17 @@ type Msg
 
 
 type HttpMsg
-    = Received (Result Http.Error (List TaskModel))
+    = Received (Result Http.Error (List TaskType))
     | Waiting
 
 
 type TaskMsg
     = ToggleComplete Int Bool
+
+
+mapUpdate : (msg -> Msg) -> ( Model, Cmd msg ) -> ( Model, Cmd Msg )
+mapUpdate toMsg ( model, cmd_msg ) =
+    ( model, Cmd.map toMsg cmd_msg )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -83,51 +92,64 @@ update msg model =
             )
 
         HttpMsgs http_msgs ->
-            updateHttp http_msgs model
+            mapUpdate HttpMsgs (updateHttp http_msgs model)
 
-        TaskMsgs task_msg ->
-            case model.tasks_status of
-                Success tasks ->
-                    let
-                        ( updated_tasks, cmd_msg ) =
-                            updateTask task_msg tasks
-                    in
-                    ( { model | tasks_status = Success updated_tasks }
-                    , cmd_msg
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+        TaskMsgs task_msgs ->
+            updateTask task_msgs model
 
 
-updateHttp : HttpMsg -> Model -> ( Model, Cmd Msg )
+updateHttp : HttpMsg -> Model -> ( Model, Cmd HttpMsg )
 updateHttp msg model =
     case msg of
         Waiting ->
-            ( { model | tasks_status = Loading }, Cmd.none )
+            ( { model | status = Loading }, getAllTasks )
 
         Received result ->
             case result of
                 Ok tasks ->
-                    ( { model | tasks_status = Success tasks }, Cmd.none )
+                    let
+                        tasks_model =
+                            List.map (\task -> TaskModel task False) tasks
+                    in
+                    ( { model | status = Success tasks_model }, Cmd.none )
 
                 Err _ ->
-                    ( { model | tasks_status = Failure }, Cmd.none )
+                    ( { model | status = Failure }, Cmd.none )
 
 
-updateTaskOld : TaskMsg -> List TaskModel -> ( List TaskModel, Cmd Msg )
-updateTaskOld msg tasks =
+updateTask : TaskMsg -> Model -> ( Model, Cmd Msg )
+updateTask msg model =
+    case model.status of
+        Success tasks ->
+            let
+                ( updated_tasks, cmd_msg ) =
+                    updateTaskModels msg tasks
+            in
+            ( { model | status = Success updated_tasks }
+            , cmd_msg
+            )
+
+        _ ->
+            ( model, Cmd.none )
+
+
+updateTaskModels : TaskMsg -> List TaskModel -> ( List TaskModel, Cmd Msg )
+updateTaskModels msg model =
+    let
+        applyToModel func task_model =
+            { task_model | task = func task_model.task }
+    in
     case msg of
         ToggleComplete id is_complete ->
             let
-                updateTaskModel task =
+                toggleComplete task =
                     if task.id == id then
                         { task | is_complete = is_complete }
 
                     else
                         task
             in
-            ( List.map updateTaskModel tasks
+            ( List.map (applyToModel toggleComplete) model
             , Cmd.none
             )
 
@@ -160,7 +182,7 @@ viewTitle =
 
 viewTasks : Model -> Html Msg
 viewTasks model =
-    case model.tasks_status of
+    case model.status of
         Failure ->
             h3 [] [ text "Error, could not connect to api" ]
 
@@ -172,12 +194,12 @@ viewTasks model =
 
 
 viewKeyedTask : Time.Zone -> TaskModel -> ( String, Html Msg )
-viewKeyedTask zone task =
-    ( String.fromInt task.id, lazy2 viewTask zone task )
+viewKeyedTask zone model =
+    ( String.fromInt model.task.id, lazy3 viewTask zone model.task model.display_extra )
 
 
-viewTask : Time.Zone -> TaskModel -> Html Msg
-viewTask _ task =
+viewTask : Time.Zone -> TaskType -> Bool -> Html Msg
+viewTask _ task _ =
     div [ class "task-content" ]
         [ div [ class "flex-row" ]
             [ input [ type_ "checkbox", checked task.is_complete, onClick (TaskMsgs (ToggleComplete task.id (not task.is_complete))) ] []
