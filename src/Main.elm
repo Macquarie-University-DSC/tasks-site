@@ -213,7 +213,7 @@ viewKeyedTask zone model =
 
 
 viewTask : Time.Zone -> TaskType -> Bool -> Html Msg
-viewTask _ task display_extra =
+viewTask zone task display_extra =
     div [ class "task-content" ]
         [ div [ class "flex-row" ]
             [ input [ type_ "checkbox", checked task.is_complete, onClick (TaskMsgs (ToggleComplete task.id (not task.is_complete))) ] []
@@ -223,8 +223,75 @@ viewTask _ task display_extra =
             ]
         , div [ hidden display_extra ]
             [ p [] [ text task.description ]
+            , viewDueDate zone task.due_date
             ]
         ]
+
+
+viewDueDate : Time.Zone -> Maybe Time.Posix -> Html Msg
+viewDueDate timezone maybe_time =
+    case maybe_time of
+        Just time ->
+            let
+                year =
+                    String.fromInt (Time.toYear timezone time)
+
+                month =
+                    toMonthInt (Time.toMonth timezone time)
+
+                day =
+                    String.fromInt (Time.toDay timezone time)
+
+                hour =
+                    String.fromInt (Time.toHour timezone time)
+
+                minute =
+                    String.fromInt (Time.toMinute timezone time)
+            in
+            p [] [ text ("Due Date: " ++ day ++ "/" ++ month ++ "/" ++ year ++ " " ++ hour ++ ":" ++ minute) ]
+
+        Nothing ->
+            p [] [ text "Due Date not set" ]
+
+
+toMonthInt : Time.Month -> String
+toMonthInt month =
+    case month of
+        Time.Jan ->
+            "1"
+
+        Time.Feb ->
+            "2"
+
+        Time.Mar ->
+            "3"
+
+        Time.Apr ->
+            "4"
+
+        Time.May ->
+            "5"
+
+        Time.Jun ->
+            "6"
+
+        Time.Jul ->
+            "7"
+
+        Time.Aug ->
+            "8"
+
+        Time.Sep ->
+            "9"
+
+        Time.Oct ->
+            "10"
+
+        Time.Nov ->
+            "11"
+
+        Time.Dec ->
+            "12"
 
 
 
