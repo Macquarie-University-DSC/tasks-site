@@ -1,9 +1,9 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, h1, h3, h4, i, input, p, text)
-import Html.Attributes exposing (checked, class, hidden, type_)
-import Html.Events exposing (onClick)
+import Html exposing (Html, button, div, h1, h3, h4, i, input, label, p, text, textarea)
+import Html.Attributes exposing (checked, class, hidden, placeholder, type_, value)
+import Html.Events exposing (onClick, onInput)
 import Html.Keyed as Keyed
 import Html.Lazy exposing (lazy, lazy3)
 import Http
@@ -19,6 +19,7 @@ import Time
 type alias Model =
     { status : Status
     , zone : Time.Zone
+    , new_task : NewTaskType
     }
 
 
@@ -31,6 +32,13 @@ type Status
 type alias TaskModel =
     { display_extra : Bool
     , task : TaskType
+    }
+
+
+type alias NewTaskType =
+    { name : String
+    , description : String
+    , due_date : Maybe Time.Posix
     }
 
 
@@ -49,7 +57,7 @@ init _ =
         getTasksMsg =
             Cmd.map HttpMsgs getAllTasks
     in
-    ( Model Loading Time.utc
+    ( Model Loading Time.utc (NewTaskType "" "" Nothing)
     , Cmd.batch [ setTimezone, getTasksMsg ]
     )
 
@@ -67,6 +75,7 @@ type Msg
     = AdjustTimeZone Time.Zone
     | HttpMsgs HttpMsg
     | TaskMsgs TaskMsg
+    | NewTaskMsgs NewTaskMsg
 
 
 type HttpMsg
@@ -77,6 +86,11 @@ type HttpMsg
 type TaskMsg
     = ToggleDisplayExtra Int Bool
     | ToggleComplete Int Bool
+
+
+type NewTaskMsg
+    = UpdateName String
+    | UpdateDescription String
 
 
 mapUpdate : (msg -> Msg) -> ( Model, Cmd msg ) -> ( Model, Cmd Msg )
@@ -97,6 +111,13 @@ update msg model =
 
         TaskMsgs task_msgs ->
             mapUpdate TaskMsgs (updateTask task_msgs model)
+
+        NewTaskMsgs new_task_msgs ->
+            let
+                ( new_task, cmd_msgs ) =
+                    updateNewTask new_task_msgs model.new_task
+            in
+            ( { model | new_task = new_task }, cmd_msgs )
 
 
 updateHttp : HttpMsg -> Model -> ( Model, Cmd HttpMsg )
@@ -168,6 +189,16 @@ updateTaskModels msg model =
             )
 
 
+updateNewTask : NewTaskMsg -> NewTaskType -> ( NewTaskType, Cmd Msg )
+updateNewTask msg model =
+    case msg of
+        UpdateName name ->
+            ( { model | name = name }, Cmd.none )
+
+        UpdateDescription description ->
+            ( { model | description = description }, Cmd.none )
+
+
 
 -- SUBSCRIPTIONS --
 
@@ -186,12 +217,35 @@ view model =
     div [ class "main" ]
         [ viewTitle
         , lazy viewTasks model
+        , viewNewTaskForm model.new_task
         ]
 
 
 viewTitle : Html Msg
 viewTitle =
     h1 [] [ text "TRACK YOUR TASKS!" ]
+
+
+viewNewTaskForm : NewTaskType -> Html Msg
+viewNewTaskForm new_task =
+    div []
+        [ h3 [] [ text "ADD A NEW TASK" ]
+        , input [ type_ "text", placeholder "Name", value new_task.name, onInput updateName ] []
+        , textarea [ placeholder "Description", value new_task.description, onInput updateDescription ] []
+        , label [] [ text "Due Date (optional)" ]
+        , input [ type_ "date" ] []
+        , button [] [ text "Submit" ]
+        ]
+
+
+updateName : String -> Msg
+updateName name =
+    NewTaskMsgs (UpdateName name)
+
+
+updateDescription : String -> Msg
+updateDescription description =
+    NewTaskMsgs (UpdateDescription description)
 
 
 viewTasks : Model -> Html Msg
