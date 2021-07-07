@@ -15,12 +15,18 @@
   border: 1px solid;
   border-radius: 1rem;
   margin: 1rem;
-  padding: 0.5rem 128px;
+  padding: 0.5rem 32rem;
 }
 
 @media only screen and (max-width: 576px) {
   .task-content {
-    padding: 0.5rem 5rem;
+    padding: 0.5rem 4rem;
+  }
+}
+
+@media only screen and (min-width: 576px) and (max-width: 992px) {
+  .task-content {
+    padding: 0.5rem 16rem;
   }
 }
 
