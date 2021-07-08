@@ -38,7 +38,9 @@ type alias TaskModel =
 type alias NewTaskType =
     { name : String
     , description : String
-    , due_date : Maybe Time.Posix
+    , due_date : String
+    , due_hour : String
+    , due_minute : String
     }
 
 
@@ -57,7 +59,7 @@ init _ =
         getTasksMsg =
             Cmd.map HttpMsgs getAllTasks
     in
-    ( Model Loading Time.utc (NewTaskType "" "" Nothing)
+    ( Model Loading Time.utc (NewTaskType "" "" "" "" "")
     , Cmd.batch [ setTimezone, getTasksMsg ]
     )
 
@@ -91,6 +93,9 @@ type TaskMsg
 type NewTaskMsg
     = UpdateName String
     | UpdateDescription String
+    | UpdateDueDate String
+    | UpdateDueHour String
+    | UpdateDueMinute String
 
 
 mapUpdate : (msg -> Msg) -> ( Model, Cmd msg ) -> ( Model, Cmd Msg )
@@ -198,6 +203,15 @@ updateNewTask msg model =
         UpdateDescription description ->
             ( { model | description = description }, Cmd.none )
 
+        UpdateDueDate due_date ->
+            ( { model | due_date = due_date }, Cmd.none )
+
+        UpdateDueHour due_hour ->
+            ( { model | due_hour = due_hour }, Cmd.none )
+
+        UpdateDueMinute due_minute ->
+            ( { model | due_minute = due_minute }, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS --
@@ -233,7 +247,7 @@ viewNewTaskForm new_task =
         , input [ type_ "text", placeholder "Name", value new_task.name, onInput updateName ] []
         , textarea [ placeholder "Description", value new_task.description, onInput updateDescription ] []
         , label [] [ text "Due Date (optional)" ]
-        , input [ type_ "date" ] []
+        , input [ type_ "date", value new_task.due_date, onInput updateDueDate ] []
         , button [] [ text "Submit" ]
         ]
 
@@ -246,6 +260,11 @@ updateName name =
 updateDescription : String -> Msg
 updateDescription description =
     NewTaskMsgs (UpdateDescription description)
+
+
+updateDueDate : String -> Msg
+updateDueDate due_date =
+    NewTaskMsgs (UpdateDueDate due_date)
 
 
 viewTasks : Model -> Html Msg
