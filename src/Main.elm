@@ -9,6 +9,7 @@ import Html.Lazy exposing (lazy, lazy3)
 import Http
 import Json.Decode as Decode
 import Task
+import Tasks exposing (TaskType)
 import Time
 
 
@@ -26,13 +27,7 @@ type alias Model =
 type Status
     = Failure
     | Loading
-    | Success (List TaskModel)
-
-
-type alias TaskModel =
-    { display_extra : Bool
-    , task : TaskType
-    }
+    | Success (List Tasks.Model)
 
 
 type alias NewTaskType =
@@ -41,15 +36,6 @@ type alias NewTaskType =
     , due_date : String
     , due_hour : String
     , due_minute : String
-    }
-
-
-type alias TaskType =
-    { id : Int
-    , name : String
-    , description : String
-    , due_date : Maybe Time.Posix
-    , is_complete : Bool
     }
 
 
@@ -76,18 +62,13 @@ setTimezone =
 type Msg
     = AdjustTimeZone Time.Zone
     | HttpMsgs HttpMsg
-    | TaskMsgs TaskMsg
+    | TaskMsgs Tasks.Msg
     | NewTaskMsgs NewTaskMsg
 
 
 type HttpMsg
     = Received (Result Http.Error (List TaskType))
     | Waiting
-
-
-type TaskMsg
-    = ToggleDisplayExtra Int Bool
-    | ToggleComplete Int Bool
 
 
 type NewTaskMsg
@@ -135,22 +116,22 @@ updateHttp msg model =
             case result of
                 Ok tasks ->
                     let
-                        tasks_model =
-                            List.map (TaskModel True) tasks
+                        taskModel =
+                            List.map (Tasks.Model True) tasks
                     in
-                    ( { model | status = Success tasks_model }, Cmd.none )
+                    ( { model | status = Success taskModel }, Cmd.none )
 
                 Err _ ->
                     ( { model | status = Failure }, Cmd.none )
 
 
-updateTask : TaskMsg -> Model -> ( Model, Cmd TaskMsg )
+updateTask : Tasks.Msg -> Model -> ( Model, Cmd Tasks.Msg )
 updateTask msg model =
     case model.status of
         Success tasks ->
             let
                 ( updated_tasks, cmd_msg ) =
-                    updateTaskModels msg tasks
+                    Tasks.update msg tasks
             in
             ( { model | status = Success updated_tasks }
             , cmd_msg
@@ -158,40 +139,6 @@ updateTask msg model =
 
         _ ->
             ( model, Cmd.none )
-
-
-updateTaskModels : TaskMsg -> List TaskModel -> ( List TaskModel, Cmd TaskMsg )
-updateTaskModels msg model =
-    let
-        applyToModel func task_model =
-            { task_model | task = func task_model.task }
-    in
-    case msg of
-        ToggleDisplayExtra id display_extra ->
-            let
-                toggleDisplayExtra task_model =
-                    if task_model.task.id == id then
-                        { task_model | display_extra = display_extra }
-
-                    else
-                        task_model
-            in
-            ( List.map toggleDisplayExtra model
-            , Cmd.none
-            )
-
-        ToggleComplete id is_complete ->
-            let
-                toggleComplete task =
-                    if task.id == id then
-                        { task | is_complete = is_complete }
-
-                    else
-                        task
-            in
-            ( List.map (applyToModel toggleComplete) model
-            , Cmd.none
-            )
 
 
 updateNewTask : NewTaskMsg -> NewTaskType -> ( NewTaskType, Cmd Msg )
@@ -211,15 +158,6 @@ updateNewTask msg model =
 
         UpdateDueMinute due_minute ->
             ( { model | due_minute = due_minute }, Cmd.none )
-
-
-
--- SUBSCRIPTIONS --
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
 
 
 
@@ -277,94 +215,7 @@ viewTasks model =
             h3 [] [ text "Loading..." ]
 
         Success tasks ->
-            Keyed.node "ul" [] (List.map (viewKeyedTask model.zone) tasks)
-
-
-viewKeyedTask : Time.Zone -> TaskModel -> ( String, Html Msg )
-viewKeyedTask zone model =
-    ( String.fromInt model.task.id, lazy3 viewTask zone model.task model.display_extra )
-
-
-viewTask : Time.Zone -> TaskType -> Bool -> Html Msg
-viewTask zone task display_extra =
-    div [ class "task-content" ]
-        [ div [ class "flex-row" ]
-            [ input [ type_ "checkbox", checked task.is_complete, onClick (TaskMsgs (ToggleComplete task.id (not task.is_complete))) ] []
-            , h4 [] [ text task.name ]
-            , button [ class "button button-clear down-button", onClick (TaskMsgs (ToggleDisplayExtra task.id (not display_extra))) ]
-                [ i [ class "fas fa-level-down-alt" ] [] ]
-            ]
-        , div [ hidden display_extra ]
-            [ p [] [ text task.description ]
-            , viewDueDate zone task.due_date
-            ]
-        ]
-
-
-viewDueDate : Time.Zone -> Maybe Time.Posix -> Html Msg
-viewDueDate timezone maybe_time =
-    case maybe_time of
-        Just time ->
-            let
-                year =
-                    String.fromInt (Time.toYear timezone time)
-
-                month =
-                    toMonthInt (Time.toMonth timezone time)
-
-                day =
-                    String.fromInt (Time.toDay timezone time)
-
-                hour =
-                    String.fromInt (Time.toHour timezone time)
-
-                minute =
-                    String.fromInt (Time.toMinute timezone time)
-            in
-            p [] [ text ("Due Date: " ++ day ++ "/" ++ month ++ "/" ++ year ++ " " ++ hour ++ ":" ++ minute) ]
-
-        Nothing ->
-            p [] [ text "Due Date not set" ]
-
-
-toMonthInt : Time.Month -> String
-toMonthInt month =
-    case month of
-        Time.Jan ->
-            "1"
-
-        Time.Feb ->
-            "2"
-
-        Time.Mar ->
-            "3"
-
-        Time.Apr ->
-            "4"
-
-        Time.May ->
-            "5"
-
-        Time.Jun ->
-            "6"
-
-        Time.Jul ->
-            "7"
-
-        Time.Aug ->
-            "8"
-
-        Time.Sep ->
-            "9"
-
-        Time.Oct ->
-            "10"
-
-        Time.Nov ->
-            "11"
-
-        Time.Dec ->
-            "12"
+            Keyed.node "ul" [] (List.map (Tasks.view model.zone) tasks)
 
 
 
@@ -413,5 +264,5 @@ main =
         { init = init
         , update = update
         , view = view
-        , subscriptions = subscriptions
+        , subscriptions = \_ -> Sub.none
         }

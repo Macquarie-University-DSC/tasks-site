@@ -26,12 +26,3 @@ toDate =
         |= int
         |. symbol "-"
         |= int
-
-
-
--- dateTimeToPosix : DateTime -> Result String Int
-
-
-toISO8601 : String -> String -> String -> String
-toISO8601 date hour minute =
-    date ++ "T" ++ hour ++ ":" ++ minute
