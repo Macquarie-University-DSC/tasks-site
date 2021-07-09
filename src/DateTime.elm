@@ -1,10 +1,7 @@
 module DateTime exposing (..)
 
 import Parser exposing ((|.), (|=), Parser, int, succeed, symbol)
-
-
-
--- COPIED ELEMENTS FROM https://github.com/rtfeldman/elm-iso8601-date-strings/blob/1.1.4/src/Iso8601.elm --
+import Time
 
 
 type alias DateTime =
