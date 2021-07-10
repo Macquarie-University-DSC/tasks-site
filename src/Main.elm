@@ -163,6 +163,9 @@ updateNewTask msg model =
 
 -- VIEW --
 
+toView : (Html msg) -> (Html Msg)
+toView =
+
 
 view : Model -> Html Msg
 view model =
