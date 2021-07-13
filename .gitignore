@@ -2,9 +2,13 @@
 /node_modules/
 
 # Parcel
+/.cache/
 /.parcel-cache/
 /dist/
 
 # Elm
 /elm-stuff/
+
+# Rust
+/time_converter/target/
 
