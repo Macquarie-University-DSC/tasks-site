@@ -1,11 +1,10 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, h1, h3, h4, i, input, label, p, text, textarea)
-import Html.Attributes exposing (checked, class, hidden, placeholder, type_, value)
-import Html.Events exposing (onClick, onInput)
-import Html.Keyed as Keyed
-import Html.Lazy exposing (lazy, lazy3)
+import Html exposing (Html, button, div, h1, h3, input, label, text, textarea)
+import Html.Attributes exposing (class, placeholder, type_, value)
+import Html.Events exposing (onInput)
+import Html.Lazy exposing (lazy)
 import Http
 import Json.Decode as Decode
 import Task
@@ -163,8 +162,10 @@ updateNewTask msg model =
 
 -- VIEW --
 
-toView : (Html msg) -> (Html Msg)
-toView =
+
+toView : (msg -> Msg) -> Html msg -> Html Msg
+toView toMsg viewer =
+    Html.map toMsg viewer
 
 
 view : Model -> Html Msg
@@ -218,7 +219,7 @@ viewTasks model =
             h3 [] [ text "Loading..." ]
 
         Success tasks ->
-            Keyed.node "ul" [] (List.map (Tasks.view model.zone) tasks)
+            toView TaskMsgs (Tasks.view model.zone tasks)
 
 
 
