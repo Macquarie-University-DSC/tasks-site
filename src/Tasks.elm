@@ -3,6 +3,7 @@ module Tasks exposing (Model, Msg, TaskType, update, view)
 import Html exposing (Html, button, div, h4, i, input, p, text)
 import Html.Attributes exposing (checked, class, hidden, type_)
 import Html.Events exposing (onClick)
+import Html.Keyed as Keyed
 import Html.Lazy exposing (lazy3)
 import Time
 
@@ -74,8 +75,13 @@ update msg model =
 -- VIEW --
 
 
-view : Time.Zone -> Model -> ( String, Html Msg )
-view zone model =
+view : Time.Zone -> List Model -> Html Msg
+view zone tasks =
+    Keyed.node "ul" [] (List.map (viewKeyedTasks zone) tasks)
+
+
+viewKeyedTasks : Time.Zone -> Model -> ( String, Html Msg )
+viewKeyedTasks zone model =
     ( String.fromInt model.task.id, lazy3 viewTask zone model.task model.displayExtra )
 
 
