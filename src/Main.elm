@@ -7,6 +7,7 @@ import Html.Events exposing (onInput)
 import Html.Lazy exposing (lazy)
 import Http
 import Json.Decode as Decode
+import NewTask
 import Task
 import Tasks exposing (TaskType)
 import Time
@@ -19,7 +20,7 @@ import Time
 type alias Model =
     { status : Status
     , zone : Time.Zone
-    , new_task : NewTaskType
+    , new_task : NewTask.Model
     }
 
 
@@ -27,15 +28,6 @@ type Status
     = Failure
     | Loading
     | Success (List Tasks.Model)
-
-
-type alias NewTaskType =
-    { name : String
-    , description : String
-    , due_date : String
-    , due_hour : String
-    , due_minute : String
-    }
 
 
 init : () -> ( Model, Cmd Msg )

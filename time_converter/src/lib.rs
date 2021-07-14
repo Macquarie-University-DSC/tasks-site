@@ -25,7 +25,7 @@ mod tests {
 
     #[test]
     fn test_time_to_posix() -> Result<(), wasm_bindgen::JsValue> {
-        use crate::time_to_posix;
+        use crate::time_converter;
         use chrono::prelude::*;
 
         let lt = Local::now().naive_local();

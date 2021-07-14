@@ -1,7 +1,10 @@
-module DateTime exposing (..)
+module DateTime exposing (Date, DateTime, updateDate, updateHour, updateMinute)
 
-import Parser exposing ((|.), (|=), Parser, int, succeed, symbol)
-import Time
+import Parser exposing ((|.), (|=), Parser, int, run, succeed, symbol)
+
+
+
+---- MODEL ----
 
 
 type alias DateTime =
@@ -18,6 +21,20 @@ type alias Date =
     }
 
 
+
+---- UPDATE ----
+
+
+updateDate : String -> Maybe DateTime -> Maybe DateTime
+updateDate dateString dateModel =
+    case dateModel of
+        Nothing ->
+            dateStringTo dateString (DateTime (Date 0 0 0) 0 0)
+
+        Just date ->
+            dateStringTo dateString date
+
+
 toDate : Parser Date
 toDate =
     succeed Date
@@ -26,3 +43,39 @@ toDate =
         |= int
         |. symbol "-"
         |= int
+
+
+dateStringTo : String -> DateTime -> Maybe DateTime
+dateStringTo dateString dateTime =
+    let
+        dateTimeResult =
+            run toDate dateString
+    in
+    case dateTimeResult of
+        Ok date ->
+            Just { dateTime | date = date }
+
+        Err _ ->
+            Nothing
+
+
+updateHour : String -> Maybe DateTime -> Maybe DateTime
+updateHour hourString dateModel =
+    Maybe.andThen (toHour hourString) dateModel
+
+
+toHour : String -> DateTime -> Maybe DateTime
+toHour hourString dateTime =
+    Maybe.map (\hour -> { dateTime | hour = hour }) (String.toInt hourString)
+
+
+updateMinute : String -> Maybe DateTime -> Maybe DateTime
+updateMinute minuteString dateModel =
+    Maybe.andThen (toMinute minuteString) dateModel
+
+
+toMinute : String -> DateTime -> Maybe DateTime
+toMinute minuteString dateTime =
+    Maybe.map
+        (\minute -> { dateTime | minute = minute })
+        (String.toInt minuteString)
