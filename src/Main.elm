@@ -1,9 +1,8 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, button, div, h1, h3, input, label, text, textarea)
-import Html.Attributes exposing (class, placeholder, type_, value)
-import Html.Events exposing (onInput)
+import Html exposing (Html, div, h1, h3, text)
+import Html.Attributes exposing (class)
 import Html.Lazy exposing (lazy)
 import Http
 import Json.Decode as Decode
@@ -36,7 +35,7 @@ init _ =
         getTasksMsg =
             Cmd.map HttpMsgs getAllTasks
     in
-    ( Model Loading Time.utc (NewTaskType "" "" "" "" "")
+    ( Model Loading Time.utc (NewTask.Model "" "" Nothing)
     , Cmd.batch [ setTimezone, getTasksMsg ]
     )
 
@@ -54,7 +53,7 @@ type Msg
     = AdjustTimeZone Time.Zone
     | HttpMsgs HttpMsg
     | TaskMsgs Tasks.Msg
-    | NewTaskMsgs NewTaskMsg
+    | NewTaskMsgs NewTask.Msg
 
 
 type HttpMsg
@@ -62,15 +61,7 @@ type HttpMsg
     | Waiting
 
 
-type NewTaskMsg
-    = UpdateName String
-    | UpdateDescription String
-    | UpdateDueDate String
-    | UpdateDueHour String
-    | UpdateDueMinute String
-
-
-mapUpdate : (msg -> Msg) -> ( Model, Cmd msg ) -> ( Model, Cmd Msg )
+mapUpdate : (msg -> Msg) -> ( m, Cmd msg ) -> ( m, Cmd Msg )
 mapUpdate toMsg ( model, cmd_msg ) =
     ( model, Cmd.map toMsg cmd_msg )
 
@@ -83,18 +74,20 @@ update msg model =
             , Cmd.none
             )
 
-        HttpMsgs http_msgs ->
-            mapUpdate HttpMsgs (updateHttp http_msgs model)
+        HttpMsgs httpMsgs ->
+            mapUpdate HttpMsgs (updateHttp httpMsgs model)
 
-        TaskMsgs task_msgs ->
-            mapUpdate TaskMsgs (updateTask task_msgs model)
+        TaskMsgs taskMsgs ->
+            mapUpdate TaskMsgs (updateTask taskMsgs model)
 
-        NewTaskMsgs new_task_msgs ->
+        NewTaskMsgs newTaskMsgs ->
             let
-                ( new_task, cmd_msgs ) =
-                    updateNewTask new_task_msgs model.new_task
+                ( newTask, cmdMsgs ) =
+                    mapUpdate
+                        NewTaskMsgs
+                        (NewTask.update newTaskMsgs model.new_task)
             in
-            ( { model | new_task = new_task }, cmd_msgs )
+            ( { model | new_task = newTask }, cmdMsgs )
 
 
 updateHttp : HttpMsg -> Model -> ( Model, Cmd HttpMsg )
@@ -132,25 +125,6 @@ updateTask msg model =
             ( model, Cmd.none )
 
 
-updateNewTask : NewTaskMsg -> NewTaskType -> ( NewTaskType, Cmd Msg )
-updateNewTask msg model =
-    case msg of
-        UpdateName name ->
-            ( { model | name = name }, Cmd.none )
-
-        UpdateDescription description ->
-            ( { model | description = description }, Cmd.none )
-
-        UpdateDueDate due_date ->
-            ( { model | due_date = due_date }, Cmd.none )
-
-        UpdateDueHour due_hour ->
-            ( { model | due_hour = due_hour }, Cmd.none )
-
-        UpdateDueMinute due_minute ->
-            ( { model | due_minute = due_minute }, Cmd.none )
-
-
 
 -- VIEW --
 
@@ -165,40 +139,13 @@ view model =
     div [ class "main" ]
         [ viewTitle
         , lazy viewTasks model
-        , viewNewTaskForm model.new_task
+        , toView NewTaskMsgs (NewTask.view model.new_task)
         ]
 
 
 viewTitle : Html Msg
 viewTitle =
     h1 [] [ text "TRACK YOUR TASKS!" ]
-
-
-viewNewTaskForm : NewTaskType -> Html Msg
-viewNewTaskForm new_task =
-    div []
-        [ h3 [] [ text "ADD A NEW TASK" ]
-        , input [ type_ "text", placeholder "Name", value new_task.name, onInput updateName ] []
-        , textarea [ placeholder "Description", value new_task.description, onInput updateDescription ] []
-        , label [] [ text "Due Date (optional)" ]
-        , input [ type_ "date", value new_task.due_date, onInput updateDueDate ] []
-        , button [] [ text "Submit" ]
-        ]
-
-
-updateName : String -> Msg
-updateName name =
-    NewTaskMsgs (UpdateName name)
-
-
-updateDescription : String -> Msg
-updateDescription description =
-    NewTaskMsgs (UpdateDescription description)
-
-
-updateDueDate : String -> Msg
-updateDueDate due_date =
-    NewTaskMsgs (UpdateDueDate due_date)
 
 
 viewTasks : Model -> Html Msg

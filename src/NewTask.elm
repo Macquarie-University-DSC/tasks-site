@@ -1,8 +1,8 @@
 module NewTask exposing (..)
 
 import DateTime exposing (DateTime, updateDate, updateHour, updateMinute)
-import Html exposing (Html, button, div, h3, input, label, text, textarea)
-import Html.Attributes exposing (placeholder, type_, value)
+import Html exposing (Html, button, div, h3, input, label, p, text, textarea)
+import Html.Attributes exposing (for, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
 
 
@@ -77,30 +77,47 @@ view : Model -> Html Msg
 view model =
     div []
         [ h3 [] [ text "ADD A NEW TASK" ]
-        , label [] [ text "Task Name" ]
+        , label [ for "taskName" ] [ text "Task Name" ]
         , input
-            [ type_ "text"
+            [ id "taskName"
+            , type_ "text"
             , placeholder "New Task Name"
             , value model.name
             , onInput UpdateName
             ]
             []
-        , label [] [ text "Task Description" ]
+        , label [ for "taskDescription" ] [ text "Task Description" ]
         , textarea
-            [ placeholder "A description of a new task"
+            [ id "taskDescription"
+            , placeholder "A description of a new task"
             , value model.description
             , onInput UpdateDescription
             ]
             []
-        , label [] [ text "Due Date (optional)" ]
+        , label [ for "taskDate" ] [ text "Due Date (optional)" ]
         , input
-            [ type_ "date"
+            [ id "taskDate"
+            , type_ "date"
             , value (dueDateToString model.due_date)
             , onInput UpdateDate
             ]
             []
+        , viewTimeInput model.due_date
         , button [] [ text "Submit" ]
         ]
+
+
+viewTimeInput : Maybe DateTime -> Html Msg
+viewTimeInput maybeDateTime =
+    case maybeDateTime of
+        Nothing ->
+            p [] [ text "enter date to add time information" ]
+
+        Just _ ->
+            div []
+                [ label [ for "taskMinute" ] [ text "Due Minute" ]
+                , input [] []
+                ]
 
 
 dueDateToString : Maybe DateTime -> String
@@ -113,11 +130,14 @@ dueDateToString maybeDateTime =
             let
                 year =
                     String.fromInt dateTime.date.year
+                        |> String.padLeft 4 '0'
 
                 month =
                     String.fromInt dateTime.date.month
+                        |> String.padLeft 2 '0'
 
                 day =
                     String.fromInt dateTime.date.day
+                        |> String.padLeft 2 '0'
             in
             year ++ "-" ++ month ++ "-" ++ day

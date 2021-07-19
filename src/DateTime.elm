@@ -1,6 +1,6 @@
-module DateTime exposing (Date, DateTime, updateDate, updateHour, updateMinute)
+module DateTime exposing (..)
 
-import Parser exposing ((|.), (|=), Parser, int, run, succeed, symbol)
+import Parser exposing ((|.), (|=), Parser, andThen, chompWhile, getChompedString, problem, run, succeed, symbol)
 
 
 
@@ -38,11 +38,27 @@ updateDate dateString dateModel =
 toDate : Parser Date
 toDate =
     succeed Date
-        |= int
+        |= paddedIntParser
         |. symbol "-"
-        |= int
+        |= paddedIntParser
         |. symbol "-"
-        |= int
+        |= paddedIntParser
+
+
+paddedIntParser : Parser Int
+paddedIntParser =
+    getChompedString (chompWhile Char.isDigit)
+        |> andThen checkPaddedInt
+
+
+checkPaddedInt : String -> Parser Int
+checkPaddedInt token =
+    case String.toInt token of
+        Just val ->
+            succeed val
+
+        Nothing ->
+            problem "Invalid integer"
 
 
 dateStringTo : String -> DateTime -> Maybe DateTime
