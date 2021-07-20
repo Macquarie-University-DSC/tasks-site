@@ -82,16 +82,26 @@ view zone tasks =
 
 viewKeyedTasks : Time.Zone -> Model -> ( String, Html Msg )
 viewKeyedTasks zone model =
-    ( String.fromInt model.task.id, lazy3 viewTask zone model.task model.displayExtra )
+    ( String.fromInt model.task.id
+    , lazy3 viewTask zone model.task model.displayExtra
+    )
 
 
 viewTask : Time.Zone -> TaskType -> Bool -> Html Msg
 viewTask zone task displayExtra =
     div [ class "task-content" ]
         [ div [ class "flex-row" ]
-            [ input [ type_ "checkbox", checked task.isComplete, onClick (ToggleComplete task.id (not task.isComplete)) ] []
+            [ input
+                [ type_ "checkbox"
+                , checked task.isComplete
+                , onClick (ToggleComplete task.id (not task.isComplete))
+                ]
+                []
             , h4 [] [ text task.name ]
-            , button [ class "button button-clear down-button", onClick (ToggleDisplayExtra task.id (not displayExtra)) ]
+            , button
+                [ class "button button-clear down-button"
+                , onClick (ToggleDisplayExtra task.id (not displayExtra))
+                ]
                 [ i [ class "fas fa-level-down-alt" ] [] ]
             ]
         , div [ hidden displayExtra ]
@@ -121,7 +131,20 @@ viewDueDate timezone maybeTime =
                 minute =
                     String.fromInt (Time.toMinute timezone time)
             in
-            p [] [ text ("Due Date: " ++ day ++ "/" ++ month ++ "/" ++ year ++ " " ++ hour ++ ":" ++ minute) ]
+            p []
+                [ text
+                    ("Due Date: "
+                        ++ day
+                        ++ "/"
+                        ++ month
+                        ++ "/"
+                        ++ year
+                        ++ " "
+                        ++ hour
+                        ++ ":"
+                        ++ minute
+                    )
+                ]
 
         Nothing ->
             p [] [ text "Due Date not set" ]
