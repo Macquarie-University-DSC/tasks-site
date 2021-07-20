@@ -82,7 +82,19 @@ updateHour hourString dateModel =
 
 toHour : String -> DateTime -> Maybe DateTime
 toHour hourString dateTime =
-    Maybe.map (\hour -> { dateTime | hour = hour }) (String.toInt hourString)
+    Maybe.map (validateHour dateTime) (String.toInt hourString)
+
+
+validateHour : DateTime -> Int -> DateTime
+validateHour dateTime hour =
+    if hour > 23 then
+        { dateTime | hour = 23 }
+
+    else if hour < 0 then
+        { dateTime | hour = 0 }
+
+    else
+        { dateTime | hour = hour }
 
 
 updateMinute : String -> Maybe DateTime -> Maybe DateTime
@@ -92,6 +104,16 @@ updateMinute minuteString dateModel =
 
 toMinute : String -> DateTime -> Maybe DateTime
 toMinute minuteString dateTime =
-    Maybe.map
-        (\minute -> { dateTime | minute = minute })
-        (String.toInt minuteString)
+    Maybe.map (validateMinute dateTime) (String.toInt minuteString)
+
+
+validateMinute : DateTime -> Int -> DateTime
+validateMinute dateTime minute =
+    if minute > 60 then
+        { dateTime | minute = 59 }
+
+    else if minute < 0 then
+        { dateTime | minute = 0 }
+
+    else
+        { dateTime | minute = minute }

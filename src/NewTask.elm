@@ -1,9 +1,10 @@
-module NewTask exposing (..)
+port module NewTask exposing (..)
 
 import DateTime exposing (DateTime, updateDate, updateHour, updateMinute)
 import Html exposing (Html, button, div, h3, input, label, p, text, textarea)
-import Html.Attributes exposing (for, id, placeholder, type_, value)
-import Html.Events exposing (onInput)
+import Html.Attributes as Attr exposing (for, id, placeholder, type_, value)
+import Html.Events exposing (onClick, onInput)
+import Json.Encode as Encode
 
 
 
@@ -25,6 +26,16 @@ type alias NewTask =
 
 
 
+---- PORTS ----
+
+
+port sendDateTime : Encode.Value -> Cmd msg
+
+
+port receivePosixTime : (Int -> msg) -> Sub msg
+
+
+
 ---- UPDATE ----
 
 
@@ -34,7 +45,8 @@ type Msg
     | UpdateDate String
     | UpdateHour String
     | UpdateMinute String
-    | ValidateRequest
+    | SubmitModel
+    | ValidateRequest Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -65,8 +77,36 @@ update msg model =
             , Cmd.none
             )
 
-        _ ->
+        SubmitModel ->
+            case model.due_date of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just dateTime ->
+                    ( model, sendDateTime (encodeDateTime dateTime) )
+
+        ValidateRequest _ ->
             ( model, Cmd.none )
+
+
+encodeDateTime : DateTime -> Encode.Value
+encodeDateTime dateTime =
+    Encode.object
+        [ ( "year", Encode.int dateTime.date.year )
+        , ( "month", Encode.int dateTime.date.month )
+        , ( "day", Encode.int dateTime.date.day )
+        , ( "hour", Encode.int dateTime.hour )
+        , ( "minute", Encode.int dateTime.minute )
+        ]
+
+
+
+---- SUBSCRIPTIONS ----
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    receivePosixTime ValidateRequest
 
 
 
@@ -103,7 +143,7 @@ view model =
             ]
             []
         , viewTimeInput model.due_date
-        , button [] [ text "Submit" ]
+        , button [ onClick SubmitModel ] [ text "Submit" ]
         ]
 
 
@@ -113,10 +153,35 @@ viewTimeInput maybeDateTime =
         Nothing ->
             p [] [ text "enter date to add time information" ]
 
-        Just _ ->
+        Just dateTime ->
+            let
+                hour =
+                    String.fromInt dateTime.hour
+
+                minute =
+                    String.fromInt dateTime.minute
+            in
             div []
-                [ label [ for "taskMinute" ] [ text "Due Minute" ]
-                , input [] []
+                [ label [ for "taskHour" ] [ text "Due Hour" ]
+                , input
+                    [ type_ "number"
+                    , id "taskHour"
+                    , value hour
+                    , Attr.min "0"
+                    , Attr.max "23"
+                    , onInput UpdateHour
+                    ]
+                    []
+                , label [ for "taskMinute" ] [ text "Due Minute" ]
+                , input
+                    [ type_ "number"
+                    , id "taskMinute"
+                    , value minute
+                    , Attr.min "0"
+                    , Attr.max "59"
+                    , onInput UpdateMinute
+                    ]
+                    []
                 ]
 
 

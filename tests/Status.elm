@@ -1,6 +1,7 @@
 module Status exposing (..)
 
 import Main
+import NewTask
 import Test exposing (..)
 import Test.Html.Query as Query
 import Test.Html.Selector exposing (tag, text)
@@ -15,7 +16,7 @@ suite =
                 \_ ->
                     let
                         testModel =
-                            Main.Model Main.Loading Time.utc
+                            Main.Model Main.Loading Time.utc (NewTask.Model "" "" Nothing)
                     in
                     Main.viewTasks testModel
                         |> Query.fromHtml
@@ -24,7 +25,7 @@ suite =
                 \_ ->
                     let
                         testModel =
-                            Main.Model Main.Failure Time.utc
+                            Main.Model Main.Failure Time.utc (NewTask.Model "" "" Nothing)
                     in
                     Main.viewTasks testModel
                         |> Query.fromHtml
