@@ -14,3 +14,18 @@ jobs:
       - uses: borales/actions-yarn@v2.3.0
         with:
           cmd: test
+  build:
+    needs: unit-tests
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: borales/actions-yarn@v2.3.0
+        with:
+          cmd: install
+      - uses: borales/actions-yarn@v2.3.0
+        with:
+          cmd: dist
+      - uses: actions/upload-artifact@v2
+        with:
+          name: _site
+          path: dist/
