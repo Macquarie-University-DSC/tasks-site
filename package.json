@@ -26,7 +26,6 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.3",
     "milligram": "^1.4.1",
-    "normalize.css": "^8.0.1",
-    "time_converter": "file:./time_converter/pkg"
+    "normalize.css": "^8.0.1"
   }
 }
