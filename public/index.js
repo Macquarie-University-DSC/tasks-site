@@ -1,10 +1,14 @@
 import { Elm } from '../src/Main.elm';
 
-
 const app = Elm.Main.init({ node: document.getElementById('root') });
 
-app.ports.sendDateTime.subscribe(async (dt) => {
-    const { time_converter } = await import('../time_converter/src/lib.rs');
+app.ports.sendDateTime.subscribe((dt) => {
+    console.log("Running port");
 
-    app.ports.receivePosixTime.send(time_converter(dt.year, dt.month, dt.day, dt.hour, dt.minute));
+    console.log(dt);
+    console.log(typeof dt.hour);
+
+    const posix = new Date(dt.year, dt.month - 1, dt.day, dt.hour, dt.minute);
+
+    app.ports.receivePosixTime.send(posix);
 });
