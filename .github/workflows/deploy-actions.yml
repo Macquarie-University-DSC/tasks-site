@@ -46,4 +46,3 @@ jobs:
           remote_host: howgood.me
           remote_user: www
           remote_key: ${{ secrets.DEPLOY_KEY }}
-          rsh: restorecon -Rv /srv/www
