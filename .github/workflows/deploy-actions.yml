@@ -38,7 +38,6 @@ jobs:
           name: _site
           path: ./www
       - run: chmod -R 755 www
-      - run: chcon -R -t httpd_sys_content_t www
       - uses: Burnett01/rsync-deployments@4.1
         with:
           switches: -avzr --delete
@@ -47,3 +46,4 @@ jobs:
           remote_host: howgood.me
           remote_user: www
           remote_key: ${{ secrets.DEPLOY_KEY }}
+          rsh: restorecon -Rv /srv/www
