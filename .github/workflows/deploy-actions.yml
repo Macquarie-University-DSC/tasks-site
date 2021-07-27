@@ -29,3 +29,20 @@ jobs:
         with:
           name: _site
           path: dist/
+  deploy:
+    needs: build
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: _site
+          path: ./www
+      - run: chmod -R 755 www
+      - uses: Burnett01/rsync-deployments@4.1
+        with:
+          switches: -avzr --delete
+          path: www/
+          remote_path: /srv/www/
+          remote_host: howgood.me
+          remote_user: www
+          remote_key: ${{ secrets.DEPLOY_KEY }}
