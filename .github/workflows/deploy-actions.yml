@@ -38,6 +38,7 @@ jobs:
           name: _site
           path: ./www
       - run: chmod -R 755 www
+      - run: chcon -R -t httpd_sys_content_t
       - uses: Burnett01/rsync-deployments@4.1
         with:
           switches: -avzr --delete
